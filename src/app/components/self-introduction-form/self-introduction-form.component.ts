@@ -165,7 +165,7 @@ export class SelfIntroductionFormComponent {
   }))
 
   isNotAllowToAddNewValue(v: NzCheckBoxOptionInterface[]) {        
-    return v.map(answer => answer.label.trim()).includes("");
+    return v.length < 6 && v.map(answer => answer.label.trim()).includes("");
   }
   questionForm =  computed(() => this.informationService.questionForm().map(v => v.type === "checkbox" ? {
     ...v,
