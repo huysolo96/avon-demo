@@ -10,6 +10,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { FormOption, InformationService } from '../../information.service';
 import { Router } from '@angular/router';
+import { array, boolean, mixed, object, string } from 'yup';
 
 
 
@@ -36,6 +37,15 @@ import { Router } from '@angular/router';
                         @switch (item.type) {
                           @case ("checkbox") {
                             <nz-checkbox-group  [(ngModel)]="item.answer" ></nz-checkbox-group>
+                            @if (item.answer[item.answer.length - 1].checked) {
+                              <nz-form-item >
+                                <nz-form-label [nzSpan]="24">Other answer</nz-form-label>
+                                <nz-form-control [nzSpan]="24">
+                                  <textarea nz-input  [rows]="5" [cols]="24" [(ngModel)]="item.otherAnswer" > </textarea>
+                                </nz-form-control>
+  
+                              </nz-form-item>
+                            }
 
                           }
                           @case ("text") {
@@ -49,7 +59,7 @@ import { Router } from '@angular/router';
                   <button nz-button (click)="addNewQuestion()" nzType="primary">Add New Question</button>
                 </div>
                 <div nz-col [nzSpan]="24">
-                  <button (click)="this.router.navigate(['form', 'answer'])" nz-button >Review my answer </button>
+                  <button (click)="this.onSubmit()" nz-button >Review my answer </button>
 
                 </div>
               </div>
@@ -75,36 +85,38 @@ import { Router } from '@angular/router';
                         </nz-form-control>
 
                       </nz-form-item>
-                      <nz-form-item>
-                          
-                        @switch (newQuestionFormValue.type) {
-                          @case ("checkbox") {
-                            <nz-form-label [nzSpan]="24">And answer option</nz-form-label>
-                            <div nz-row [nzGutter]="[0, 8]" nz-col [nzSpan]="24">
-                              @for(item of newQuestionFormValue.answer; track item) {
+                      
+                      @switch (newQuestionFormValue.type) {
+                        @case ("checkbox") {
+                            <nz-form-item>
+                              <nz-form-label [nzSpan]="24">And answer option</nz-form-label>
+                              <div nz-row [nzGutter]="[0, 8]" nz-col [nzSpan]="24">
+                                @for(item of newQuestionFormValue.answer; track item) {
+                                  <div nz-col nzSpan="24">
+                                    <nz-form-control [nzSpan]="24">
+                                      <input nz-input [(ngModel)]="item.label" placeholder="And answer option">
+                                    </nz-form-control>
+
+                                  </div>
+                                }
                                 <div nz-col nzSpan="24">
-                                  <nz-form-control [nzSpan]="24">
-                                    <input nz-input [(ngModel)]="item.label" placeholder="And answer option">
-                                  </nz-form-control>
-
-                                </div>
-                              }
-                              <div nz-col nzSpan="24">
-                                <button nz-button (click)="addNewCheckboxAnswer()">Add another answer</button>
-                            </div>
+                                  <button [disabled]="isNotAllowToAddNewValue(newQuestionFormValue.answer)" nz-button (click)="addNewCheckboxAnswer()">Add another answer</button>
+                              </div>
 
                             </div>
-
+                            </nz-form-item>
+                           
                           }
                           @case ("text") {
+                          <nz-form-item>
                             <nz-form-label [nzSpan]="24">Type answer here</nz-form-label>
                             <nz-form-control>
                               <input nz-input [(ngModel)]="newQuestionFormValue.answer">
                             </nz-form-control>
 
+                          </nz-form-item>
                           }
                         }
-                      </nz-form-item>
                       <nz-form-item >
                           <nz-form-control [nzSpan]="24">
                             <div nz-checkbox [nzValue]="true" [(nzChecked)]="newQuestionFormValue.allowSpecificUser">Allow user to specify their own answer</div>
@@ -131,16 +143,55 @@ import { Router } from '@angular/router';
 })
 export class SelfIntroductionFormComponent {
   newQuestionForm = signal<FormOption | null>(null);
-  questionForm =  this.informationService.questionForm;
+  questionSchema = array(object().shape({
+    type: string().oneOf(["text", "checkbox"]),
+    required: boolean().nullable(),
+    answer: mixed().when(["required", "type"], (v, schema) => {
+      console.log(v);
+      
+      if (!v[0]) {
+        return schema;
+      }
+      if (v[1] === "checkbox") {
+        return array(object().shape({
+          label: string().required(),
+          value: string(),
+          otherAnswer: string().nullable()
+        })).required()
+      }
+      return string().required()
+    })
+    
+  }))
+
+  isNotAllowToAddNewValue(v: NzCheckBoxOptionInterface[]) {        
+    return v.map(answer => answer.label.trim()).includes("");
+  }
+  questionForm =  computed(() => this.informationService.questionForm().map(v => v.type === "checkbox" ? {
+    ...v,
+    answer: [
+      ...v.answer,
+      {
+        value: '',
+        label: 'Other'
+      }
+    ]
+  } : v));
 
   constructor(private informationService: InformationService, protected router: Router) {
     
+  }
+  onSubmit() {
+    const valid = this.questionSchema.validateSync(this.questionForm());    
+    if (valid) {
+      this.router.navigate(['form', 'answer'])
+    }
   }
   onSubmitnewQuestionSet() {
     const newValue = this.newQuestionForm();
     
     if (newValue) {
-      this.questionForm.update(v => [
+      this.informationService.questionForm.update(v => [
         ...v,
         newValue
       ]);

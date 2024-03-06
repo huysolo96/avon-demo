@@ -13,7 +13,8 @@ export type FormBasicOption = {
 export type FormOption = FormBasicOption & (
   {
     answer: NzCheckBoxOptionInterface[];
-    type: "checkbox"
+    type: "checkbox";
+    otherAnswer?: string;
   } | {
     answer: string;
     type: "text"
@@ -42,7 +43,6 @@ export class InformationService {
         { label: 'Typescript', value: 'Typescript', },
         { label: 'Python', value: 'Python' },
         { label: 'C#', value: 'C#' },
-        { label: 'Other', value: '' },
       ],
       id: uniqueId()
 
