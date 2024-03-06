@@ -46,7 +46,7 @@ import { Router } from '@angular/router';
                     </nz-form-item>
                   }
 
-                  <button nz-button (click)="addNewQuestion()" color="primary">Add New Question</button>
+                  <button nz-button (click)="addNewQuestion()" nzType="primary">Add New Question</button>
                 </div>
                 <div nz-col [nzSpan]="24">
                   <button (click)="this.router.navigate(['form', 'answer'])" nz-button >Review my answer </button>
